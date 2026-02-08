@@ -1,21 +1,21 @@
 {
-  "name": "instagram-phishing",
+  "name": "instagram-ui-clone",
   "version": "1.0.0",
-  "description": "Instagram Login Page",
+  "description": "Instagram login page UI implementation",
+  "private": true,
   "scripts": {
     "dev": "vercel dev",
     "start": "serve . -p 3000",
-    "build": "echo 'Static site - no build required' && exit 0"
+    "build": "echo 'Static site - no build required'"
   },
   "dependencies": {
-    "node-fetch": "^2.6.7"
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
-    "@vercel/node": "^2.0.0",
+    "@vercel/node": "^3.0.0",
     "serve": "^14.0.0"
   },
   "engines": {
-    "node": "18.x"
-  },
-  "license": "MIT"
+    "node": ">=20.0.0"
+  }
 }
